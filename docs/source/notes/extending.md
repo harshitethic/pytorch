@@ -1191,6 +1191,52 @@ It is also possible to add `new` native functions using {mod}`torch.library`. Th
 
 You can find many examples of ``__torch_dispatch__``-based subclasses in the [subclass zoo](https://github.com/albanD/subclass_zoo) repo.
 
+### Making wrapper subclasses traceable with ``torch.compile``
+
+Wrapper tensor subclasses that keep one or more inner tensors as attributes can expose
+``__tensor_flatten__`` and ``__tensor_unflatten__`` so PyTorch compilation can
+reconstruct the wrapper while tracing. These methods are an internal-facing extension
+point and may evolve, but documenting the contract here makes failures actionable for
+subclass authors.
+
+``__tensor_flatten__`` returns two values:
+
+1. a sequence of attribute names whose values are the inner tensors that participate in
+   tracing; and
+2. arbitrary metadata needed to rebuild the wrapper.
+
+``__tensor_unflatten__`` receives a mapping from those attribute names to the traced
+inner values, the metadata returned by ``__tensor_flatten__``, and the requested outer
+size and stride. It must return an equivalent instance of the wrapper subclass.
+
+A minimal shape of the protocol is:
+
+```{code-block} python
+:dedent: 2
+
+  class MyWrapper(torch.Tensor):
+      def __tensor_flatten__(self):
+          return ("inner",), self.my_metadata
+
+      @staticmethod
+      def __tensor_unflatten__(inner_tensors, metadata, outer_size, outer_stride):
+          inner = inner_tensors["inner"]
+          return MyWrapper._from_inner(
+              inner,
+              metadata=metadata,
+              size=outer_size,
+              stride=outer_stride,
+          )
+```
+
+The attribute names should be stable for a given wrapper representation. If
+``attrs, metadata = x.__tensor_flatten__()``, then rebuilding from
+``{name: getattr(x, name) for name in attrs}``, ``metadata``, ``x.size()``,
+and ``x.stride()`` should produce an equivalent wrapper. PyTorch uses this contract
+for traceable wrapper subclasses; see
+{func}`torch.utils._python_dispatch.is_traceable_wrapper_subclass` for the runtime
+check.
+
 (torch-dispatch-calling-convention)=
 
 ### ``__torch_dispatch__`` calling convention
