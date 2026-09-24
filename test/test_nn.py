@@ -98,6 +98,41 @@ class TestNN(NNTestCase):
     _do_cuda_memory_leak_check = True
     _do_cuda_non_default_stream = True
 
+    def test_tf32_wrapper_applies_precision_to_module_test(self):
+        observed = []
+
+        class FakeModuleTest:
+            precision = 1e-5
+            tf32_precision = 0.125
+            with_tf32 = True
+            test_cpu = False
+
+            def get_name(self):
+                return "_tf32_precision_plumbing"
+
+            def test_cuda(self, test_case):
+                observed.append((self.precision, test_case.precision))
+
+        module_test = FakeModuleTest()
+        generated_names = [
+            "_tf32_precision_plumbing_cuda_fp32",
+            "_tf32_precision_plumbing_cuda_tf32",
+        ]
+        with mock.patch.object(torch.cuda, "is_tf32_supported", return_value=True):
+            add_test(module_test)
+
+        try:
+            original_case_precision = self.precision
+            getattr(TestNN, generated_names[1])(self)
+            self.assertEqual(
+                observed,
+                [(module_test.tf32_precision, original_case_precision)],
+            )
+            self.assertEqual(module_test.precision, 1e-5)
+        finally:
+            for name in generated_names:
+                delattr(TestNN, name)
+
     def _forward(self, module, input: _TensorOrTensors):
         with freeze_rng_state():
             if isinstance(input, tuple):
