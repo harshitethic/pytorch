@@ -2169,6 +2169,24 @@ class TestTestParametrization(TestCase):
         with self.assertRaisesRegex(RuntimeError, 'contains a "." character'):
             instantiate_parametrized_tests(TestParametrized)
 
+    def test_default_name_with_non_identifier_characters_raises(self):
+        class TestParametrized(TestCase):
+            @parametrize("np_dtype", ["'bool_'"])
+            def test_bad_name(self, np_dtype):
+                pass
+
+        with self.assertRaisesRegex(RuntimeError, "valid Python identifiers"):
+            instantiate_parametrized_tests(TestParametrized)
+
+    def test_name_fn_with_non_identifier_characters_raises(self):
+        class TestParametrized(TestCase):
+            @parametrize("x", [1], name_fn=lambda _: "case-with-dashes")
+            def test_bad_name(self, x):
+                pass
+
+        with self.assertRaisesRegex(RuntimeError, "valid Python identifiers"):
+            instantiate_parametrized_tests(TestParametrized)
+
     def test_subtest_name_with_dot_raises(self):
         class TestParametrized(TestCase):
             @parametrize("x", [subtest(1, name="a.b")])
