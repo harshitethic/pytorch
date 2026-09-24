@@ -6718,7 +6718,7 @@ def add_test(test, decorator=None, tf32_decorator=None):
             add(cuda_test_name + '_fp32', with_tf32_off)
 
             def with_tf32_on(self, test=test, kwargs=kwargs):
-                with tf32_on(self, test.tf32_precision):
+                with tf32_on(test, test.tf32_precision):
                     test.test_cuda(self, dtype=torch.float, **kwargs)
 
             if tf32_decorator is not None:
@@ -6758,7 +6758,7 @@ def add_test(test, decorator=None, tf32_decorator=None):
             add(cuda_test_name + '_fp32', with_tf32_off)
 
             def with_tf32_on(self, test=test, kwargs=kwargs):
-                with tf32_on(self, test.tf32_precision):
+                with tf32_on(test, test.tf32_precision):
                     test.test_cuda(self, **kwargs)
 
             if tf32_decorator is not None:
