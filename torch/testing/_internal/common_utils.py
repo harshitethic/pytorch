@@ -705,12 +705,15 @@ def compose_parametrize_fns(old_parametrize_fn, new_parametrize_fn):
 
 def validate_test_name(name):
     """
-    Validates a generated test name at instantiation time. In particular, test names must
-    not contain '.': unittest.TestLoader.loadTestsFromName resolves dotted names by
-    splitting on '.' and walking with getattr, so a dotted test name is discoverable in a
-    full-suite run but breaks any attempt to load the test by name (e.g.
-    `python test_foo.py TestClass.test_name`).
+    Validates a generated test name at instantiation time.
+
+    Parametrized tests become attributes on unittest test classes, so their generated
+    names must be valid Python identifiers. Invalid names can still be discovered in a
+    full-suite run but break tooling that loads or references tests by symbol.
     """
+    if name.isidentifier():
+        return
+
     if '.' in name:
         raise RuntimeError(
             f'Test name "{name}" is invalid: it contains a "." character, which breaks '
@@ -719,6 +722,10 @@ def validate_test_name(name):
             'name that interpolates a value whose string form contains a dot (e.g. '
             'str(torch.bfloat16) == "torch.bfloat16" or a float). Use dtype_name() for '
             'dtypes, or sanitize the generated name (e.g. .replace(".", "_")).')
+
+    raise RuntimeError(
+        f'Test name "{name}" is invalid: generated test names must be valid Python '
+        'identifiers. Use name_fn or subtest(..., name=...) to provide a sanitized name.')
 
 
 def instantiate_parametrized_tests(generic_cls):
