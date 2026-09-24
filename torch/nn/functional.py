@@ -1480,6 +1480,12 @@ def dropout(
 
     Uses samples from a Bernoulli distribution.
 
+    Unlike :class:`~torch.nn.Dropout`, this functional form does not inspect a
+    module's training/evaluation mode. The ``training`` argument controls the
+    behavior directly and defaults to ``True``. When calling ``dropout``
+    from an :class:`~torch.nn.Module` that should follow ``train()`` /
+    ``eval()``, pass ``training=self.training``.
+
     See :class:`~torch.nn.Dropout` for details.
 
     Args:
